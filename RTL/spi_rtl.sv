@@ -1,3 +1,20 @@
+module spi_top #(parameter DATA_WIDTH = 12)(
+   input 					clk,
+   input 					reset,
+   input [DATA_WIDTH-1:0]	din,
+   input 					new_data,
+   output 					done,
+   output [DATA_WIDTH-1:0]	dout);
+   
+   wire cs, mosi, sclk;
+   
+   spi_master DUT_master(.clk(clk), .reset(reset), .din(din), .new_data(new_data), .cs(cs), .mosi(mosi), .sclk(sclk));
+   spi_slave DUT_slave(.sclk(sclk), .mosi(mosi), .cs(cs), .done(done), .dout(dout));
+   
+endmodule
+
+//////////////////////////////////////////////////////////////////////////////////////
+
 module spi_master #(parameter DATA_WIDTH = 12)(
    input 				  	clk,
    input 				  	reset,
@@ -21,7 +38,7 @@ module spi_master #(parameter DATA_WIDTH = 12)(
 	  if(reset) begin
 	     sclk		<= 0;
 		 count_clk	<= 0;
-		 state		<= idle;
+		 //state		<= idle;
 	  end
 	  
 	  else if(count_clk < 5) begin
@@ -55,7 +72,7 @@ module spi_master #(parameter DATA_WIDTH = 12)(
 		       end
 			   else begin
 			      state <= idle;
-				  temp	<= 'b0;
+				  temp	<= 12'b0;
 			   end
 			end
 			
@@ -63,6 +80,7 @@ module spi_master #(parameter DATA_WIDTH = 12)(
               if(count_din <= DATA_WIDTH-1) begin
 			      mosi		<= temp[count_din];		// Sending LSB First
 				  count_din <= count_din + 1;
+													// CS = 0 in this scenario
 			   end
 			   else begin
 			      state		<= idle;
@@ -101,9 +119,10 @@ module spi_slave #(parameter DATA_WIDTH = 12)(
       case(state)
 	   
 			detect_state: begin
+              	done <= 1'b0;	// THIS IS V.IMP. otherwise the run will hang
 				if(cs == 1'b0) begin
 					state <= read_state;
-					temp <= 1'b0;
+					//temp <= 1'b0;
 				end
 				else begin
 					state <= detect_state;
@@ -129,18 +148,3 @@ module spi_slave #(parameter DATA_WIDTH = 12)(
 endmodule
 
 //////////////////////////////////////////////////////////////////////////////////////
-
-module spi_top #(parameter DATA_WIDTH = 12)(
-   input 					clk,
-   input 					reset,
-   input [DATA_WIDTH-1:0]	din,
-   input 					new_data,
-   output 					done,
-   output [DATA_WIDTH-1:0]	dout);
-   
-   wire cs, mosi, sclk;
-   
-   spi_master DUT_master(.clk(clk), .reset(reset), .din(din), .new_data(new_data), .cs(cs), .mosi(mosi), .sclk(sclk));
-   spi_slave DUT_slave(.sclk(sclk), .mosi(mosi), .cs(cs), .done(done), .dout(dout));
-   
-endmodule
